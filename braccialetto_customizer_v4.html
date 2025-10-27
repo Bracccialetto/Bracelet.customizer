@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Braccialetto Customizer</title>
+<style>
+  body {
+    background-color: #f7e8e3;
+    font-family: "Poppins", sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0;
+    padding: 20px;
+    min-height: 100vh;
+    position: relative;
+  }
+
+  .logo {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    border: 4px solid #fbc0ca;
+    object-fit: cover;
+    margin-bottom: 20px;
+  }
+
+  .controls {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+
+  select {
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: none;
+    background-color: #fbc0ca;
+    color: white;
+    cursor: pointer;
+    font-size: 15px;
+  }
+
+  .bracelet {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    gap: 6px;
+    border: 2px solid #fbc0ca;
+    border-radius: 12px;
+    background-color: #fff;
+    padding: 12px;
+    overflow-x: auto;
+    width: 90%;
+    max-width: 800px;
+    margin: 20px auto;
+  }
+
+  .link-box {
+    width: 50px;
+    height: 50px;
+    border: 1px dashed #fbc0ca;
+    border-radius: 6px;
+    background-color: #fff;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .link-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    cursor: grab;
+  }
+
+  .delete-btn {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background-color: #fbc0ca;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
+    cursor: pointer;
+    display: none;
+  }
+
+  .link-box:hover .delete-btn {
+    display: block;
+  }
+
+  .charm-gallery {
+    margin-top: 25px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+  }
+
+  .charm-gallery img {
+    width: 50px;
+    height: 50px;
+    border-radius: 8px;
+    cursor: grab;
+    background-color: white;
+    border: 2px solid #fbc0ca;
+    padding: 4px;
+  }
+
+  .upload, .save {
+    position: fixed;
+    bottom: 20px;
+    background-color: #fbc0ca;
+    color: white;
+    padding: 12px 18px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 15px;
+    box-shadow: 0 6px 12px rgba(251,192,202,0.5);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .upload:hover, .save:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 16px rgba(251,192,202,0.7);
+  }
+
+  .upload {
+    left: 20px;
+  }
+
+  .save {
+    right: 20px;
+  }
+
+  .upload input {
+    display: none;
+  }
+</style>
+</head>
+
+<body>
+  <img src="fullcolor logo.png" alt="Braccialetto Logo" class="logo" />
+
+  <div class="controls">
+    <label>Bracelet Size:
+      <select id="braceletSize">
+        <option value="16">16 Links</option>
+        <option value="18">18 Links</option>
+        <option value="20">20 Links</option>
+      </select>
+    </label>
+
+    <label>Category:
+      <select id="categoryFilter">
+        <option value="all">All</option>
+        <option value="simple">Simple</option>
+        <option value="dangle">Dangle</option>
+        <option value="chain">Chain</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="bracelet" id="bracelet"></div>
+
+  <div class="charm-gallery" id="charmGallery"></div>
+
+  <label class="upload">
+    + Upload Charm
+    <input type="file" id="charmUpload" accept="image/*" />
+  </label>
+
+  <button class="save" id="saveDesign">💾 Save Design</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+  const bracelet = document.getElementById("bracelet");
+  const braceletSize = document.getElementById("braceletSize");
+  const charmGallery = document.getElementById("charmGallery");
+  const charmUpload = document.getElementById("charmUpload");
+  const categoryFilter = document.getElementById("categoryFilter");
+  const saveDesignBtn = document.getElementById("saveDesign");
+
+  let charms = []; // no pre-added charms
+  let braceletSetup = JSON.parse(localStorage.getItem("braceletSetup")) || [];
+
+  function renderBracelet() {
+    bracelet.innerHTML = "";
+    const size = parseInt(braceletSize.value);
+    for (let i = 0; i < size; i++) {
+      const box = document.createElement("div");
+      box.className = "link-box";
+      box.ondragover = e => e.preventDefault();
+      box.ondrop = e => {
+        e.preventDefault();
+        const imgSrc = e.dataTransfer.getData("text");
+        addCharmToBox(box, imgSrc, i);
+      };
+      if (braceletSetup[i]) {
+        addCharmToBox(box, braceletSetup[i], i);
+      }
+      bracelet.appendChild(box);
+    }
+  }
+
+  function addCharmToBox(box, imgSrc, index) {
+    box.innerHTML = `
+      <img src="${imgSrc}" draggable="true" />
+      <button class="delete-btn">❌</button>
+    `;
+    const img = box.querySelector("img");
+    const delBtn = box.querySelector(".delete-btn");
+
+    img.ondragstart = e => e.dataTransfer.setData("text", imgSrc);
+    img.oncontextmenu = e => {
+      e.preventDefault();
+      deleteCharm(box, index);
+    };
+    delBtn.onclick = () => deleteCharm(box, index);
+
+    braceletSetup[index] = imgSrc;
+    saveBracelet();
+  }
+
+  function deleteCharm(box, index) {
+    box.innerHTML = "";
+    braceletSetup[index] = null;
+    saveBracelet();
+  }
+
+  function renderCharms() {
+    charmGallery.innerHTML = "";
+    const filter = categoryFilter.value;
+    charms
+      .filter(ch => filter === "all" || ch.category === filter)
+      .forEach(ch => {
+        const img = document.createElement("img");
+        img.src = ch.src;
+        img.draggable = true;
+        img.ondragstart = e => e.dataTransfer.setData("text", ch.src);
+        img.onclick = () => {
+          const empty = [...bracelet.children].find(b => !b.querySelector("img"));
+          if (empty) addCharmToBox(empty, ch.src, [...bracelet.children].indexOf(empty));
+        };
+        charmGallery.appendChild(img);
+      });
+  }
+
+  function saveBracelet() {
+    localStorage.setItem("braceletSetup", JSON.stringify(braceletSetup));
+  }
+
+  charmUpload.addEventListener("change", e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const name = file.name.toLowerCase();
+      let category = "simple";
+      if (name.includes("dangle")) category = "dangle";
+      else if (name.includes("chain")) category = "chain";
+      charms.push({ src: ev.target.result, category });
+      renderCharms();
+    };
+    reader.readAsDataURL(file);
+  });
+
+  braceletSize.onchange = () => {
+    renderBracelet();
+    saveBracelet();
+  };
+
+  categoryFilter.onchange = renderCharms;
+
+  saveDesignBtn.onclick = () => {
+    html2canvas(bracelet, { backgroundColor: "#fff" }).then(canvas => {
+      const link = document.createElement("a");
+      link.download = "bracelet_design.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    });
+  };
+
+  renderBracelet();
+  renderCharms();
+</script>
+</body>
+</html>
